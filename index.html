@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Specter</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&display=swap');
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --accent: #7df9ff;
+    --accent-dim: rgba(125, 249, 255, 0.15);
+    --text: #e0e0e4;
+    --text-dim: #666;
+    --border: rgba(255,255,255,0.08);
+    --mono: 'DM Mono', monospace;
+  }
+
+  html, body {
+    background: transparent !important;
+    font-family: var(--mono);
+    height: 100%;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    position: relative;
+  }
+
+  /* ── Title bar (draggable) ── */
+  .titlebar {
+    -webkit-app-region: drag;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 32px;
+    padding: 0 10px;
+    background: rgba(10,10,12,0.65);
+    backdrop-filter: blur(6px);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .titlebar-label {
+    font-size: 11px;
+    font-weight: 300;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+
+  .titlebar-label span { color: var(--accent); }
+
+  .titlebar-controls {
+    -webkit-app-region: no-drag;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .tb-btn {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.15s;
+  }
+  .tb-btn:hover { opacity: 1; }
+  .tb-pin { background: #5ac8fa; }
+  .tb-pin.pinned { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+  .tb-close { background: #ff5f57; }
+
+  /* ── Video area ── */
+  .video-container {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    overflow: hidden;
+  }
+
+  video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  /* ── Drop zone ── */
+  .drop-zone {
+    position: absolute;
+    inset: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    border: 1.5px dashed rgba(255,255,255,0.12);
+    border-radius: 8px;
+    background: rgba(10,10,12,0.4);
+    backdrop-filter: blur(4px);
+    z-index: 10;
+    transition: all 0.2s;
+  }
+
+  .drop-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(125, 249, 255, 0.06);
+  }
+
+  .drop-zone.hidden { display: none; }
+
+  .drop-icon svg {
+    width: 28px; height: 28px;
+    stroke: var(--text-dim);
+    fill: none;
+    stroke-width: 1.5;
+  }
+
+  .drop-text {
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+  }
+  .drop-text strong {
+    color: var(--accent);
+    cursor: pointer;
+  }
+
+  /* ── Bottom HUD ── */
+  .hud {
+    flex-shrink: 0;
+    background: rgba(10,10,12,0.65);
+    backdrop-filter: blur(6px);
+    border-top: 1px solid var(--border);
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    transition: opacity 0.2s;
+  }
+
+  .hud-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* Play button */
+  .ctrl-btn {
+    background: none; border: none;
+    cursor: pointer; padding: 2px;
+    display: flex; align-items: center;
+    color: var(--text-dim);
+    transition: color 0.15s;
+    flex-shrink: 0;
+  }
+  .ctrl-btn:hover { color: var(--text); }
+  .ctrl-btn svg { width: 16px; height: 16px; fill: currentColor; }
+
+  /* Progress */
+  .progress-wrap {
+    flex: 1; height: 20px;
+    display: flex; align-items: center;
+    cursor: pointer;
+  }
+  .progress-track {
+    width: 100%; height: 2px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 1px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+  }
+
+  .time-display {
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+    min-width: 80px;
+    text-align: right;
+  }
+
+  /* Opacity row */
+  .opacity-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .opacity-label {
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+    width: 55px;
+  }
+
+  .step-btn {
+    flex: 1;
+    height: 22px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 3px;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.12s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .step-btn::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: var(--accent);
+    opacity: 0;
+    transition: opacity 0.12s;
+  }
+
+  .step-btn:hover { border-color: var(--accent); }
+
+  .step-btn.active {
+    border-color: var(--accent);
+    color: #0a0a0b;
+    font-weight: 500;
+  }
+  .step-btn.active::before { opacity: 1; }
+  .step-btn i { position: relative; z-index: 1; font-style: normal; }
+
+  /* Auto-hide HUD on hover-away */
+  .hud-autohide .hud,
+  .hud-autohide .titlebar {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .hud-autohide:hover .hud,
+  .hud-autohide:hover .titlebar {
+    opacity: 1;
+    pointer-events: auto;
+  }
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+  <div class="titlebar">
+    <div class="titlebar-label"><span>👻</span> specter</div>
+    <div class="titlebar-controls">
+      <button class="tb-btn tb-pin pinned" id="pinBtn" title="Always on top"></button>
+      <button class="tb-btn tb-close" id="closeBtn" title="Close"></button>
+    </div>
+  </div>
+
+  <div class="video-container" id="videoContainer">
+    <video id="video" preload="metadata"></video>
+    <div class="drop-zone" id="dropZone">
+      <div class="drop-icon">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+      </div>
+      <div class="drop-text">Drop video or <strong id="browseBtn">browse</strong></div>
+    </div>
+  </div>
+
+  <div class="hud" id="hud">
+    <div class="hud-row">
+      <button class="ctrl-btn" id="playBtn">
+        <svg viewBox="0 0 24 24" id="playIcon"><path d="M5 3l14 9-14 9V3z"/></svg>
+      </button>
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-track">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+      </div>
+      <div class="time-display" id="timeDisplay">0:00 / 0:00</div>
+    </div>
+    <div class="hud-row opacity-row">
+      <div class="opacity-label">opacity</div>
+      <div id="opacitySteps" style="display:flex;gap:3px;flex:1;"></div>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept="video/*" style="display:none">
+
+<script>
+  const { ipcRenderer } = require('electron');
+
+  const video = document.getElementById('video');
+  const dropZone = document.getElementById('dropZone');
+  const playBtn = document.getElementById('playBtn');
+  const playIcon = document.getElementById('playIcon');
+  const progressFill = document.getElementById('progressFill');
+  const progressWrap = document.getElementById('progressWrap');
+  const timeDisplay = document.getElementById('timeDisplay');
+  const opacitySteps = document.getElementById('opacitySteps');
+  const fileInput = document.getElementById('fileInput');
+  const browseBtn = document.getElementById('browseBtn');
+  const pinBtn = document.getElementById('pinBtn');
+  const closeBtn = document.getElementById('closeBtn');
+  const appEl = document.getElementById('app');
+  const videoContainer = document.getElementById('videoContainer');
+
+  let currentLevel = 9;
+  let pinned = true;
+
+  // ── Opacity steps ──
+  for (let i = 0; i <= 9; i++) {
+    const btn = document.createElement('button');
+    btn.className = 'step-btn' + (i === 9 ? ' active' : '');
+    btn.innerHTML = `<i>${i}</i>`;
+    btn.dataset.level = i;
+    btn.addEventListener('click', () => setOpacity(i));
+    opacitySteps.appendChild(btn);
+  }
+
+  function setOpacity(level) {
+    currentLevel = level;
+    const opacity = level === 0 ? 0 : level / 9;
+    video.style.opacity = opacity;
+
+    document.querySelectorAll('.step-btn').forEach(b => {
+      b.classList.toggle('active', parseInt(b.dataset.level) === level);
+    });
+
+    // Auto-hide HUD at very low opacities
+    if (level <= 3 && video.src) {
+      appEl.classList.add('hud-autohide');
+    } else {
+      appEl.classList.remove('hud-autohide');
+    }
+  }
+
+  // ── File loading ──
+  function loadFile(file) {
+    video.src = URL.createObjectURL(file);
+    video.load();
+    dropZone.classList.add('hidden');
+  }
+
+  browseBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    fileInput.click();
+  });
+
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files[0]) loadFile(e.target.files[0]);
+  });
+
+  // Drag & drop
+  document.addEventListener('dragover', (e) => e.preventDefault());
+  document.addEventListener('drop', (e) => e.preventDefault());
+
+  ['dragenter', 'dragover'].forEach(evt => {
+    dropZone.addEventListener(evt, (e) => {
+      e.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+  });
+  ['dragleave', 'drop'].forEach(evt => {
+    dropZone.addEventListener(evt, () => dropZone.classList.remove('drag-over'));
+  });
+
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('video/')) loadFile(file);
+  });
+
+  videoContainer.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('video/')) loadFile(file);
+  });
+
+  // ── Playback ──
+  const pausePath = 'M6 4h4v16H6zm8 0h4v16h-4z';
+  const playPath = 'M5 3l14 9-14 9V3z';
+
+  function togglePlay() {
+    if (!video.src) return;
+    video.paused ? video.play() : video.pause();
+  }
+
+  video.addEventListener('play', () => playIcon.innerHTML = `<path d="${pausePath}"/>`);
+  video.addEventListener('pause', () => playIcon.innerHTML = `<path d="${playPath}"/>`);
+
+  playBtn.addEventListener('click', togglePlay);
+  video.addEventListener('click', togglePlay);
+
+  function fmt(s) {
+    if (isNaN(s)) return '0:00';
+    return `${Math.floor(s/60)}:${Math.floor(s%60).toString().padStart(2,'0')}`;
+  }
+
+  video.addEventListener('timeupdate', () => {
+    if (!video.duration) return;
+    progressFill.style.width = (video.currentTime / video.duration * 100) + '%';
+    timeDisplay.textContent = `${fmt(video.currentTime)} / ${fmt(video.duration)}`;
+  });
+
+  progressWrap.addEventListener('click', (e) => {
+    if (!video.duration) return;
+    const rect = progressWrap.getBoundingClientRect();
+    video.currentTime = ((e.clientX - rect.left) / rect.width) * video.duration;
+  });
+
+  // ── Titlebar controls ──
+  pinBtn.addEventListener('click', () => {
+    pinned = !pinned;
+    pinBtn.classList.toggle('pinned', pinned);
+    ipcRenderer.send('set-always-on-top', pinned);
+  });
+
+  closeBtn.addEventListener('click', () => window.close());
+
+  // ── Keyboard ──
+  document.addEventListener('keydown', (e) => {
+    if (e.key === ' ') { e.preventDefault(); togglePlay(); }
+    else if (e.key >= '0' && e.key <= '9') { setOpacity(parseInt(e.key)); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); video.currentTime = Math.max(0, video.currentTime - 5); }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); video.currentTime = Math.min(video.duration || 0, video.currentTime + 5); }
+    else if (e.key === 'h') { appEl.classList.toggle('hud-autohide'); }
+    else if (e.key === 'Escape') { window.close(); }
+  });
+
+  // ── Loop by default ──
+  video.loop = true;
+</script>
+</body>
+</html>
