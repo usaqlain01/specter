@@ -16,9 +16,8 @@
     --text-dim: #666;
     --border: rgba(255,255,255,0.08);
     --mono: 'DM Mono', monospace;
-    --glow-c: #ff3366;
-    --glow-m: #aa44ff;
-    --glow-s: #33ff88;
+    --glow-active: #ff2244;
+    --glow-reset: #33ff88;
   }
 
   html, body {
@@ -36,7 +35,6 @@
     position: relative;
   }
 
-  /* ── Title bar (draggable) ── */
   .titlebar {
     -webkit-app-region: drag;
     display: flex;
@@ -56,7 +54,6 @@
     color: var(--text-dim);
     text-transform: uppercase;
   }
-
   .titlebar-label span { color: var(--accent); }
 
   .titlebar-controls {
@@ -80,7 +77,6 @@
   .tb-minimize { background: #ffbd2e; }
   .tb-close { background: #ff5f57; }
 
-  /* ── Video / Canvas area ── */
   .video-container {
     flex: 1;
     position: relative;
@@ -91,9 +87,7 @@
     overflow: hidden;
   }
 
-  video {
-    display: none;
-  }
+  video { display: none; }
 
   canvas#glCanvas {
     width: 100%;
@@ -102,7 +96,6 @@
     display: block;
   }
 
-  /* ── Drop zone ── */
   .drop-zone {
     position: absolute;
     inset: 8px;
@@ -117,12 +110,10 @@
     z-index: 10;
     transition: all 0.2s;
   }
-
   .drop-zone.drag-over {
     border-color: var(--accent);
     background: rgba(125, 249, 255, 0.06);
   }
-
   .drop-zone.hidden { display: none; }
 
   .drop-icon svg {
@@ -131,7 +122,6 @@
     fill: none;
     stroke-width: 1.5;
   }
-
   .drop-text {
     font-size: 11px;
     color: var(--text-dim);
@@ -142,7 +132,6 @@
     cursor: pointer;
   }
 
-  /* ── Bottom HUD ── */
   .hud {
     flex-shrink: 0;
     background: rgba(10,10,12,0.85);
@@ -160,7 +149,6 @@
     gap: 10px;
   }
 
-  /* Control buttons */
   .ctrl-btn {
     background: none; border: none;
     cursor: pointer; padding: 2px;
@@ -172,7 +160,6 @@
   .ctrl-btn:hover { color: var(--text); }
   .ctrl-btn svg { width: 16px; height: 16px; fill: currentColor; }
 
-  /* ── Glitch buttons ── */
   .glitch-sep {
     width: 1px;
     height: 16px;
@@ -195,7 +182,6 @@
     color: var(--text-dim);
     transition: all 0.15s;
     flex-shrink: 0;
-    position: relative;
   }
 
   .glitch-btn:hover {
@@ -203,22 +189,10 @@
     color: var(--text);
   }
 
-  .glitch-btn.active-c {
-    color: var(--glow-c);
-    border-color: var(--glow-c);
-    box-shadow: 0 0 8px rgba(255, 51, 102, 0.3);
-  }
-
-  .glitch-btn.active-m {
-    color: var(--glow-m);
-    border-color: var(--glow-m);
-    box-shadow: 0 0 8px rgba(170, 68, 255, 0.3);
-  }
-
-  .glitch-btn.active-s {
-    color: var(--glow-s);
-    border-color: var(--glow-s);
-    box-shadow: 0 0 8px rgba(51, 255, 136, 0.3);
+  .glitch-btn.active {
+    color: var(--glow-active);
+    border-color: var(--glow-active);
+    box-shadow: 0 0 8px rgba(255, 34, 68, 0.35);
   }
 
   .glitch-btn .intensity-dots {
@@ -227,7 +201,27 @@
     letter-spacing: 1px;
   }
 
-  /* Progress */
+  .reset-btn {
+    background: none;
+    border: 1px solid rgba(51, 255, 136, 0.2);
+    border-radius: 3px;
+    cursor: pointer;
+    padding: 2px 6px;
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(51, 255, 136, 0.5);
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .reset-btn:hover {
+    color: var(--glow-reset);
+    border-color: var(--glow-reset);
+    box-shadow: 0 0 8px rgba(51, 255, 136, 0.3);
+  }
+
   .progress-wrap {
     flex: 1; height: 20px;
     display: flex; align-items: center;
@@ -254,13 +248,7 @@
     text-align: right;
   }
 
-  /* Opacity row */
-  .opacity-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
+  .opacity-row { display: flex; align-items: center; gap: 6px; }
   .opacity-label {
     font-size: 9px;
     color: var(--text-dim);
@@ -271,8 +259,7 @@
   }
 
   .step-btn {
-    flex: 1;
-    height: 22px;
+    flex: 1; height: 22px;
     background: rgba(255,255,255,0.03);
     border: 1px solid rgba(255,255,255,0.06);
     border-radius: 3px;
@@ -284,7 +271,6 @@
     position: relative;
     overflow: hidden;
   }
-
   .step-btn::before {
     content: '';
     position: absolute; inset: 0;
@@ -292,28 +278,15 @@
     opacity: 0;
     transition: opacity 0.12s;
   }
-
   .step-btn:hover { border-color: var(--accent); }
-
-  .step-btn.active {
-    border-color: var(--accent);
-    color: #0a0a0b;
-    font-weight: 500;
-  }
+  .step-btn.active { border-color: var(--accent); color: #0a0a0b; font-weight: 500; }
   .step-btn.active::before { opacity: 1; }
   .step-btn i { position: relative; z-index: 1; font-style: normal; }
 
-  /* Auto-hide HUD on hover-away */
   .hud-autohide .hud,
-  .hud-autohide .titlebar {
-    opacity: 0;
-    pointer-events: none;
-  }
+  .hud-autohide .titlebar { opacity: 0; pointer-events: none; }
   .hud-autohide:hover .hud,
-  .hud-autohide:hover .titlebar {
-    opacity: 1;
-    pointer-events: auto;
-  }
+  .hud-autohide:hover .titlebar { opacity: 1; pointer-events: auto; }
 </style>
 </head>
 <body>
@@ -348,10 +321,10 @@
       <button class="ctrl-btn" id="playBtn" title="Play/Pause">
         <svg viewBox="0 0 24 24" id="playIcon"><path d="M5 3l14 9-14 9V3z"/></svg>
       </button>
-      <button class="ctrl-btn" id="framePrevBtn" title="Previous frame ( , )">
+      <button class="ctrl-btn" id="framePrevBtn" title="Previous frame">
         <svg viewBox="0 0 24 24"><path d="M19 20L9 12l10-8v16zM5 4h2v16H5V4z"/></svg>
       </button>
-      <button class="ctrl-btn" id="frameNextBtn" title="Next frame ( . )">
+      <button class="ctrl-btn" id="frameNextBtn" title="Next frame">
         <svg viewBox="0 0 24 24"><path d="M5 4l10 8-10 8V4zm12 0h2v16h-2V4z"/></svg>
       </button>
       <div class="progress-wrap" id="progressWrap">
@@ -366,9 +339,11 @@
         <svg viewBox="0 0 24 24" style="width:12px;height:12px;"><text x="1" y="17" font-size="16" fill="currentColor" font-family="monospace">½</text></svg>
       </button>
       <div class="glitch-sep"></div>
-      <button class="glitch-btn" id="glitchC" title="Chromatic RGB Split (C)">C<span class="intensity-dots"></span></button>
-      <button class="glitch-btn" id="glitchM" title="Melt Datamosh (V)">M<span class="intensity-dots"></span></button>
-      <button class="glitch-btn" id="glitchS" title="Signal Corruption (B)">S<span class="intensity-dots"></span></button>
+      <button class="glitch-btn" id="glitchC" title="Chromatic (C)">C<span class="intensity-dots"></span></button>
+      <button class="glitch-btn" id="glitchM" title="Melt (V)">M<span class="intensity-dots"></span></button>
+      <button class="glitch-btn" id="glitchS" title="Signal (B)">S<span class="intensity-dots"></span></button>
+      <button class="glitch-btn" id="glitchD" title="Decay (D)">D<span class="intensity-dots"></span></button>
+      <button class="reset-btn" id="resetBtn" title="Reset all (R)">RST</button>
       <div class="time-display" id="timeDisplay">0:00 / 0:00</div>
     </div>
     <div class="hud-row opacity-row">
@@ -380,10 +355,7 @@
 
 <input type="file" id="fileInput" accept="video/*" style="display:none">
 
-<!-- ════════════════════════════════════════════════════════════════
-     VERTEX SHADER
-     ════════════════════════════════════════════════════════════════ -->
-<script id="vs" type="x-shader/x-vertex">
+<script id="vs-passthrough" type="x-shader/x-vertex">
   attribute vec2 a_position;
   attribute vec2 a_texCoord;
   varying vec2 v_uv;
@@ -393,30 +365,18 @@
   }
 </script>
 
-<!-- ════════════════════════════════════════════════════════════════
-     FRAGMENT SHADER — all 3 glitch effects in one pass
-     ════════════════════════════════════════════════════════════════ -->
-<script id="fs" type="x-shader/x-fragment">
+<script id="fs-effects" type="x-shader/x-fragment">
   precision mediump float;
-
   varying vec2 v_uv;
-  uniform sampler2D u_video;
+  uniform sampler2D u_source;
   uniform vec2 u_resolution;
   uniform float u_time;
-
-  // Effect intensities (0.0 = off, 0.33 = low, 0.66 = med, 1.0 = high)
   uniform float u_chromatic;
   uniform float u_melt;
   uniform float u_signal;
 
-  // ── Noise helpers ──
-  float hash(float n) {
-    return fract(sin(n) * 43758.5453123);
-  }
-
-  float hash2(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
-  }
+  float hash(float n) { return fract(sin(n) * 43758.5453123); }
+  float hash2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
 
   float noise(vec2 p) {
     vec2 i = floor(p);
@@ -429,170 +389,227 @@
     return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
   }
 
-  // Block noise for datamosh feel
-  float blockNoise(vec2 uv, float blockSize) {
-    vec2 block = floor(uv * blockSize) / blockSize;
+  float blockNoise(vec2 uv, float bs) {
+    vec2 block = floor(uv * bs) / bs;
     return hash2(block + floor(u_time * 2.0));
   }
 
   void main() {
     vec2 uv = v_uv;
-    vec4 color;
 
-    // ════════════════════════════════════════════
-    // EFFECT 1: MELT (Datamosh displacement)
-    // ════════════════════════════════════════════
     if (u_melt > 0.0) {
       float intensity = u_melt;
-
-      // Create blocky displacement zones
-      float blockSize = mix(8.0, 4.0, intensity);
-      vec2 block = floor(uv * blockSize);
+      float bs = mix(8.0, 4.0, intensity);
+      vec2 block = floor(uv * bs);
       float trigger = hash2(block + floor(u_time * 1.5));
-
-      // Only displace some blocks (more blocks at higher intensity)
-      float threshold = mix(0.8, 0.4, intensity);
-
-      if (trigger > threshold) {
-        // Displacement direction from noise
+      if (trigger > mix(0.8, 0.4, intensity)) {
         float angle = hash2(block * 7.77 + floor(u_time * 2.0)) * 6.2831;
         float dist = hash2(block * 3.33 + floor(u_time * 1.8)) * intensity * 0.12;
-
         uv += vec2(cos(angle), sin(angle)) * dist;
-
-        // Smear: blend with a time-offset sample for ghosting
-        float smear = noise(block * 5.0 + u_time) * intensity * 0.06;
-        uv.y += smear;
+        uv.y += noise(block * 5.0 + u_time) * intensity * 0.06;
       }
-
-      // Macro displacement waves (the smooth melting feel)
       float wave = noise(vec2(uv.y * 3.0, u_time * 0.7)) * 2.0 - 1.0;
       uv.x += wave * intensity * 0.025;
     }
 
-    // ════════════════════════════════════════════
-    // EFFECT 3: SIGNAL (Scanline corruption)
-    // ════════════════════════════════════════════
     if (u_signal > 0.0) {
       float intensity = u_signal;
-
-      // Scanline groups with random horizontal shift
       float scanH = mix(80.0, 30.0, intensity);
       float scanGroup = floor(uv.y * scanH);
       float groupSeed = hash(scanGroup + floor(u_time * 4.0) * 99.0);
-
-      // Only shift some scanline groups
-      float shiftThreshold = mix(0.85, 0.55, intensity);
-      if (groupSeed > shiftThreshold) {
-        float shiftAmount = (hash(scanGroup * 17.0 + floor(u_time * 6.0)) * 2.0 - 1.0);
-        uv.x += shiftAmount * intensity * 0.15;
+      if (groupSeed > mix(0.85, 0.55, intensity)) {
+        float shiftAmt = (hash(scanGroup * 17.0 + floor(u_time * 6.0)) * 2.0 - 1.0);
+        uv.x += shiftAmt * intensity * 0.15;
       }
-
-      // Occasional full-width tears
       float tearSeed = hash(floor(u_time * 3.0) + 0.5);
       if (tearSeed > 0.7) {
-        float tearY = hash(floor(u_time * 5.0)) ;
-        float tearWidth = 0.005 + intensity * 0.02;
-        if (abs(uv.y - tearY) < tearWidth) {
+        float tearY = hash(floor(u_time * 5.0));
+        if (abs(uv.y - tearY) < 0.005 + intensity * 0.02) {
           uv.x += (hash(uv.y * 500.0 + u_time) * 2.0 - 1.0) * intensity * 0.3;
         }
       }
-
-      // Subtle vertical jitter
       uv.y += (hash(floor(u_time * 8.0)) * 2.0 - 1.0) * intensity * 0.003;
     }
 
-    // Clamp UV after displacement
     uv = clamp(uv, 0.0, 1.0);
 
-    // ════════════════════════════════════════════
-    // EFFECT 2: CHROMATIC (RGB Channel Split)
-    // ════════════════════════════════════════════
+    vec4 color;
     if (u_chromatic > 0.0) {
       float intensity = u_chromatic;
-
-      // Base offset that shifts over time
       float angle = u_time * 0.5;
       vec2 dir = vec2(cos(angle), sin(angle));
       float offset = intensity * 0.015;
-
-      // Add some wobble for organic feel
       float wobble = sin(uv.y * 20.0 + u_time * 3.0) * intensity * 0.003;
-
       vec2 rOff = dir * (offset + wobble);
       vec2 bOff = -dir * (offset + wobble);
-
-      // Green stays centered, R and B split apart
-      float r = texture2D(u_video, clamp(uv + rOff, 0.0, 1.0)).r;
-      float g = texture2D(u_video, uv).g;
-      float b = texture2D(u_video, clamp(uv + bOff, 0.0, 1.0)).b;
-
+      float r = texture2D(u_source, clamp(uv + rOff, 0.0, 1.0)).r;
+      float g = texture2D(u_source, uv).g;
+      float b = texture2D(u_source, clamp(uv + bOff, 0.0, 1.0)).b;
       color = vec4(r, g, b, 1.0);
     } else {
-      color = texture2D(u_video, uv);
+      color = texture2D(u_source, uv);
     }
 
-    // ════════════════════════════════════════════
-    // SIGNAL post-pass: color banding + noise
-    // ════════════════════════════════════════════
     if (u_signal > 0.0) {
       float intensity = u_signal;
-
-      // Scanline darkening
       float scanline = sin(v_uv.y * u_resolution.y * 1.5) * 0.5 + 0.5;
       color.rgb *= 1.0 - scanline * intensity * 0.15;
-
-      // Color channel noise (the green/purple you love)
       float cn = hash2(v_uv * u_resolution + floor(u_time * 10.0)) * 2.0 - 1.0;
       color.r += cn * intensity * 0.08;
       color.g -= cn * intensity * 0.06;
       color.b += cn * intensity * 0.1;
-
-      // Random color band flashes
       float bandSeed = hash(floor(v_uv.y * 20.0) + floor(u_time * 5.0));
       if (bandSeed > mix(0.95, 0.8, intensity)) {
         color.rgb = mix(color.rgb, vec3(cn * 0.5 + 0.5, 1.0 - color.g, color.b * 0.5), intensity * 0.6);
       }
     }
 
-    // ════════════════════════════════════════════
-    // MELT post-pass: color bleed between channels
-    // ════════════════════════════════════════════
     if (u_melt > 0.0) {
       float intensity = u_melt;
-
-      // Block-based color shift (green/magenta bleeding)
-      float blockSize = mix(12.0, 6.0, intensity);
-      float bn = blockNoise(v_uv, blockSize);
-
+      float bs = mix(12.0, 6.0, intensity);
+      float bn = blockNoise(v_uv, bs);
       if (bn > mix(0.85, 0.6, intensity)) {
-        // Shift hue by swapping/blending channels
-        float shift = hash2(floor(v_uv * blockSize) + floor(u_time * 2.0));
-        if (shift > 0.5) {
-          color.rgb = mix(color.rgb, color.grb, intensity * 0.5);  // green-magenta shift
-        } else {
-          color.rgb = mix(color.rgb, color.brg, intensity * 0.4);  // cyan-purple shift
-        }
+        float shift = hash2(floor(v_uv * bs) + floor(u_time * 2.0));
+        if (shift > 0.5) color.rgb = mix(color.rgb, color.grb, intensity * 0.5);
+        else color.rgb = mix(color.rgb, color.brg, intensity * 0.4);
       }
-
-      // Smooth noise overlay (the "smooth noise" you described)
-      float smoothN = noise(v_uv * 8.0 + u_time * 0.5);
-      color.g += smoothN * intensity * 0.05;
-      color.b -= smoothN * intensity * 0.03;
+      float sn = noise(v_uv * 8.0 + u_time * 0.5);
+      color.g += sn * intensity * 0.05;
+      color.b -= sn * intensity * 0.03;
     }
 
-    // Ensure valid color range
     color.rgb = clamp(color.rgb, 0.0, 1.0);
     color.a = 1.0;
-
     gl_FragColor = color;
+  }
+</script>
+
+<script id="fs-decay" type="x-shader/x-fragment">
+  precision mediump float;
+  varying vec2 v_uv;
+  uniform sampler2D u_current;
+  uniform sampler2D u_previous;
+  uniform vec2 u_resolution;
+  uniform float u_time;
+  uniform float u_decay;
+
+  float hash(float n) { return fract(sin(n) * 43758.5453123); }
+  float hash2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
+
+  float noise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(
+      mix(hash2(i), hash2(i + vec2(1.0, 0.0)), f.x),
+      mix(hash2(i + vec2(0.0, 1.0)), hash2(i + vec2(1.0, 1.0)), f.x),
+      f.y
+    );
+  }
+
+  vec3 rgb2ycbcr(vec3 rgb) {
+    float y  =  0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b;
+    float cb = -0.169 * rgb.r - 0.331 * rgb.g + 0.500 * rgb.b + 0.5;
+    float cr =  0.500 * rgb.r - 0.419 * rgb.g - 0.081 * rgb.b + 0.5;
+    return vec3(y, cb, cr);
+  }
+
+  vec3 ycbcr2rgb(vec3 ycbcr) {
+    float y  = ycbcr.x;
+    float cb = ycbcr.y - 0.5;
+    float cr = ycbcr.z - 0.5;
+    float r = y + 1.402 * cr;
+    float g = y - 0.344 * cb - 0.714 * cr;
+    float b = y + 1.772 * cb;
+    return vec3(r, g, b);
+  }
+
+  void main() {
+    if (u_decay <= 0.0) {
+      gl_FragColor = texture2D(u_current, v_uv);
+      return;
+    }
+
+    float intensity = u_decay;
+    vec2 uv = v_uv;
+
+    float mbSize = 16.0;
+    vec2 mbCoord = floor(uv * u_resolution / mbSize);
+    float mbSeed = hash2(mbCoord + floor(u_time * 1.3) * 0.1);
+
+    float staleThreshold = mix(0.85, 0.35, intensity);
+    bool blockIsStale = mbSeed > staleThreshold;
+
+    vec2 prevUV = uv;
+    if (blockIsStale) {
+      float mvAngle = hash2(mbCoord * 3.14) * 6.2831;
+      float mvMag = hash2(mbCoord * 7.77 + floor(u_time * 0.8)) * intensity * 0.04;
+      float drift = noise(vec2(mbCoord.x * 0.5, u_time * 0.3)) * intensity * 0.02;
+      prevUV = uv + vec2(cos(mvAngle), sin(mvAngle)) * mvMag + vec2(drift, 0.0);
+      prevUV = clamp(prevUV, 0.0, 1.0);
+    }
+
+    vec4 currentColor = texture2D(u_current, uv);
+    vec4 previousColor = texture2D(u_previous, prevUV);
+
+    vec3 currentYCC = rgb2ycbcr(currentColor.rgb);
+    vec3 previousYCC = rgb2ycbcr(previousColor.rgb);
+
+    vec3 finalYCC;
+
+    if (blockIsStale) {
+      float chromaShift = intensity * 0.015;
+      float shiftAngle = hash2(mbCoord * 11.11) * 6.2831;
+      vec2 cbOffset = vec2(cos(shiftAngle), sin(shiftAngle)) * chromaShift;
+      vec2 crOffset = vec2(cos(shiftAngle + 2.09), sin(shiftAngle + 2.09)) * chromaShift;
+
+      vec3 cbSample = rgb2ycbcr(texture2D(u_previous, clamp(prevUV + cbOffset, 0.0, 1.0)).rgb);
+      vec3 crSample = rgb2ycbcr(texture2D(u_previous, clamp(prevUV + crOffset, 0.0, 1.0)).rgb);
+
+      float lumaMix = hash2(mbCoord + floor(u_time * 0.5)) * intensity;
+      float y = mix(currentYCC.x, previousYCC.x, lumaMix * 0.7);
+      float cb = mix(currentYCC.y, cbSample.y, intensity * 0.85);
+      float cr = mix(currentYCC.z, crSample.z, intensity * 0.85);
+
+      finalYCC = vec3(y, cb, cr);
+    } else {
+      float bleed = intensity * 0.08;
+      finalYCC = mix(currentYCC, previousYCC, bleed);
+    }
+
+    vec3 result = ycbcr2rgb(finalYCC);
+
+    vec2 mbFract = fract(uv * u_resolution / mbSize);
+    float edge = step(mbFract.x, 0.03) + step(mbFract.y, 0.03);
+    if (blockIsStale && edge > 0.0) {
+      result += vec3(0.02) * intensity * edge;
+    }
+
+    float ghostMix = intensity * 0.15;
+    result = mix(result, previousColor.rgb, ghostMix);
+
+    float flashSeed = hash(floor(u_time * 2.0) + 999.0);
+    if (flashSeed > mix(0.97, 0.85, intensity)) {
+      result = mix(result, previousColor.rgb, intensity * 0.5);
+    }
+
+    result = clamp(result, 0.0, 1.0);
+    gl_FragColor = vec4(result, 1.0);
+  }
+</script>
+
+<script id="fs-copy" type="x-shader/x-fragment">
+  precision mediump float;
+  varying vec2 v_uv;
+  uniform sampler2D u_source;
+  void main() {
+    gl_FragColor = texture2D(u_source, v_uv);
   }
 </script>
 
 <script>
   const { ipcRenderer } = require('electron');
 
-  // ── DOM refs ──
   const video = document.getElementById('video');
   const canvas = document.getElementById('glCanvas');
   const dropZone = document.getElementById('dropZone');
@@ -617,18 +634,18 @@
   const glitchCBtn = document.getElementById('glitchC');
   const glitchMBtn = document.getElementById('glitchM');
   const glitchSBtn = document.getElementById('glitchS');
+  const glitchDBtn = document.getElementById('glitchD');
+  const resetBtn = document.getElementById('resetBtn');
 
   let currentLevel = 9;
   let pinned = true;
 
-  // ══════════════════════════════════════════════
-  // WEBGL SETUP
-  // ══════════════════════════════════════════════
+  // ═══════════════════════════════════
+  // WEBGL — Multi-pass pipeline
+  // ═══════════════════════════════════
   const gl = canvas.getContext('webgl', {
-    premultipliedAlpha: false,
-    alpha: true,
-    preserveDrawingBuffer: false,
-    antialias: false,
+    premultipliedAlpha: false, alpha: true,
+    preserveDrawingBuffer: false, antialias: false,
   });
 
   function compileShader(type, src) {
@@ -636,144 +653,213 @@
     gl.shaderSource(s, src);
     gl.compileShader(s);
     if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
-      console.error('Shader error:', gl.getShaderInfoLog(s));
-      return null;
+      console.error('Shader:', gl.getShaderInfoLog(s));
     }
     return s;
   }
 
-  const vs = compileShader(gl.VERTEX_SHADER, document.getElementById('vs').textContent);
-  const fs = compileShader(gl.FRAGMENT_SHADER, document.getElementById('fs').textContent);
-
-  const program = gl.createProgram();
-  gl.attachShader(program, vs);
-  gl.attachShader(program, fs);
-  gl.linkProgram(program);
-
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    console.error('Program link error:', gl.getProgramInfoLog(program));
+  function createProgram(vsId, fsId) {
+    const vs = compileShader(gl.VERTEX_SHADER, document.getElementById(vsId).textContent);
+    const fs = compileShader(gl.FRAGMENT_SHADER, document.getElementById(fsId).textContent);
+    const p = gl.createProgram();
+    gl.attachShader(p, vs);
+    gl.attachShader(p, fs);
+    gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
+      console.error('Link:', gl.getProgramInfoLog(p));
+    }
+    return p;
   }
 
-  gl.useProgram(program);
+  const progEffects = createProgram('vs-passthrough', 'fs-effects');
+  const progDecay   = createProgram('vs-passthrough', 'fs-decay');
+  const progCopy    = createProgram('vs-passthrough', 'fs-copy');
 
-  // Geometry: full-screen quad
   const posBuf = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-    -1, -1,  1, -1,  -1, 1,
-    -1,  1,  1, -1,   1, 1,
-  ]), gl.STATIC_DRAW);
-
-  const posLoc = gl.getAttribLocation(program, 'a_position');
-  gl.enableVertexAttribArray(posLoc);
-  gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]), gl.STATIC_DRAW);
 
   const tcBuf = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, tcBuf);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-    0, 1,  1, 1,  0, 0,
-    0, 0,  1, 1,  1, 0,
-  ]), gl.STATIC_DRAW);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0,1,1,1,0,0,0,0,1,1,1,0]), gl.STATIC_DRAW);
 
-  const tcLoc = gl.getAttribLocation(program, 'a_texCoord');
-  gl.enableVertexAttribArray(tcLoc);
-  gl.vertexAttribPointer(tcLoc, 2, gl.FLOAT, false, 0, 0);
-
-  // Video texture
-  const tex = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, tex);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-
-  // Uniform locations
-  const uVideo = gl.getUniformLocation(program, 'u_video');
-  const uResolution = gl.getUniformLocation(program, 'u_resolution');
-  const uTime = gl.getUniformLocation(program, 'u_time');
-  const uChromatic = gl.getUniformLocation(program, 'u_chromatic');
-  const uMelt = gl.getUniformLocation(program, 'u_melt');
-  const uSignal = gl.getUniformLocation(program, 'u_signal');
-
-  gl.uniform1i(uVideo, 0);
-
-  // ── Glitch state ──
-  // Each effect cycles: 0 (off) → 0.33 (low) → 0.66 (med) → 1.0 (high) → 0 (off)
-  const glitchState = { chromatic: 0, melt: 0, signal: 0 };
-  const intensityLevels = [0, 0.33, 0.66, 1.0];
-  const dotChars = ['', '·', '··', '···'];
-
-  function cycleGlitch(effect, btn, activeClass) {
-    const idx = intensityLevels.indexOf(glitchState[effect]);
-    const next = (idx + 1) % intensityLevels.length;
-    glitchState[effect] = intensityLevels[next];
-
-    btn.classList.toggle(activeClass, next > 0);
-    btn.querySelector('.intensity-dots').textContent = dotChars[next];
+  function bindQuad(prog) {
+    const p = gl.getAttribLocation(prog, 'a_position');
+    gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
+    gl.enableVertexAttribArray(p);
+    gl.vertexAttribPointer(p, 2, gl.FLOAT, false, 0, 0);
+    const t = gl.getAttribLocation(prog, 'a_texCoord');
+    gl.bindBuffer(gl.ARRAY_BUFFER, tcBuf);
+    gl.enableVertexAttribArray(t);
+    gl.vertexAttribPointer(t, 2, gl.FLOAT, false, 0, 0);
   }
 
-  glitchCBtn.addEventListener('click', () => cycleGlitch('chromatic', glitchCBtn, 'active-c'));
-  glitchMBtn.addEventListener('click', () => cycleGlitch('melt', glitchMBtn, 'active-m'));
-  glitchSBtn.addEventListener('click', () => cycleGlitch('signal', glitchSBtn, 'active-s'));
+  function createTexture() {
+    const t = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    return t;
+  }
 
-  // ── Render loop ──
+  const videoTex = createTexture();
+  const effectsTex = createTexture();
+  const decayTexA = createTexture();
+  const decayTexB = createTexture();
+
+  function createFBO(tex) {
+    const f = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, f);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+    return f;
+  }
+
+  const fboEffects = createFBO(effectsTex);
+  const fboDecayA = createFBO(decayTexA);
+  const fboDecayB = createFBO(decayTexB);
+
+  let dRead = decayTexA, dWrite = decayTexB, dFBO = fboDecayB;
+  let fbosReady = false;
+  let lastW = 0, lastH = 0;
+
+  function initFBOs(w, h) {
+    [effectsTex, decayTexA, decayTexB].forEach(t => {
+      gl.bindTexture(gl.TEXTURE_2D, t);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    });
+    lastW = w; lastH = h; fbosReady = true;
+  }
+
+  // ═══════════════════════════════════
+  // GLITCH STATE
+  // ═══════════════════════════════════
+  const glitchState = { chromatic: 0, melt: 0, signal: 0, decay: 0 };
+  const levels = [0, 0.33, 0.66, 1.0];
+  const dots = ['', '·', '··', '···'];
+
+  function cycleGlitch(effect, btn) {
+    const idx = levels.indexOf(glitchState[effect]);
+    const next = (idx + 1) % levels.length;
+    glitchState[effect] = levels[next];
+    btn.classList.toggle('active', next > 0);
+    btn.querySelector('.intensity-dots').textContent = dots[next];
+  }
+
+  function resetAllGlitches() {
+    glitchState.chromatic = 0;
+    glitchState.melt = 0;
+    glitchState.signal = 0;
+    glitchState.decay = 0;
+    [glitchCBtn, glitchMBtn, glitchSBtn, glitchDBtn].forEach(b => {
+      b.classList.remove('active');
+      b.querySelector('.intensity-dots').textContent = '';
+    });
+    fbosReady = false;
+  }
+
+  glitchCBtn.addEventListener('click', () => cycleGlitch('chromatic', glitchCBtn));
+  glitchMBtn.addEventListener('click', () => cycleGlitch('melt', glitchMBtn));
+  glitchSBtn.addEventListener('click', () => cycleGlitch('signal', glitchSBtn));
+  glitchDBtn.addEventListener('click', () => cycleGlitch('decay', glitchDBtn));
+  resetBtn.addEventListener('click', resetAllGlitches);
+
+  // ═══════════════════════════════════
+  // RENDER LOOP
+  // ═══════════════════════════════════
   let videoReady = false;
   let animId = null;
-  const startTime = performance.now();
+  const t0 = performance.now();
 
   function resizeCanvas() {
     const w = videoContainer.clientWidth;
     const h = videoContainer.clientHeight;
     if (canvas.width !== w || canvas.height !== h) {
-      canvas.width = w;
-      canvas.height = h;
+      canvas.width = w; canvas.height = h;
       gl.viewport(0, 0, w, h);
+      if (w > 0 && h > 0) initFBOs(w, h);
     }
   }
 
   function render() {
     animId = requestAnimationFrame(render);
-
     if (!videoReady) return;
-
     resizeCanvas();
+    const w = canvas.width, h = canvas.height;
+    if (w === 0 || h === 0) return;
+    if (!fbosReady) initFBOs(w, h);
 
-    const t = (performance.now() - startTime) / 1000.0;
+    const t = (performance.now() - t0) / 1000.0;
 
-    // Upload video frame to texture
     try {
-      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.bindTexture(gl.TEXTURE_2D, videoTex);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
-    } catch (e) {
-      return; // Video not ready yet
-    }
+    } catch(e) { return; }
 
-    // Set uniforms
-    gl.uniform2f(uResolution, canvas.width, canvas.height);
-    gl.uniform1f(uTime, t);
-    gl.uniform1f(uChromatic, glitchState.chromatic);
-    gl.uniform1f(uMelt, glitchState.melt);
-    gl.uniform1f(uSignal, glitchState.signal);
-
-    // Draw
+    // Pass 1: C/M/S effects → FBO
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fboEffects);
+    gl.viewport(0, 0, w, h);
+    gl.useProgram(progEffects);
+    bindQuad(progEffects);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, videoTex);
+    gl.uniform1i(gl.getUniformLocation(progEffects, 'u_source'), 0);
+    gl.uniform2f(gl.getUniformLocation(progEffects, 'u_resolution'), w, h);
+    gl.uniform1f(gl.getUniformLocation(progEffects, 'u_time'), t);
+    gl.uniform1f(gl.getUniformLocation(progEffects, 'u_chromatic'), glitchState.chromatic);
+    gl.uniform1f(gl.getUniformLocation(progEffects, 'u_melt'), glitchState.melt);
+    gl.uniform1f(gl.getUniformLocation(progEffects, 'u_signal'), glitchState.signal);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+    // Pass 2: Decay — composite with frame buffer
+    gl.bindFramebuffer(gl.FRAMEBUFFER, dFBO);
+    gl.viewport(0, 0, w, h);
+    gl.useProgram(progDecay);
+    bindQuad(progDecay);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, effectsTex);
+    gl.uniform1i(gl.getUniformLocation(progDecay, 'u_current'), 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, dRead);
+    gl.uniform1i(gl.getUniformLocation(progDecay, 'u_previous'), 1);
+    gl.uniform2f(gl.getUniformLocation(progDecay, 'u_resolution'), w, h);
+    gl.uniform1f(gl.getUniformLocation(progDecay, 'u_time'), t);
+    gl.uniform1f(gl.getUniformLocation(progDecay, 'u_decay'), glitchState.decay);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+    // Pass 3: Copy to screen
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, w, h);
+    gl.useProgram(progCopy);
+    bindQuad(progCopy);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, dWrite);
+    gl.uniform1i(gl.getUniformLocation(progCopy, 'u_source'), 0);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+    // Ping-pong swap
+    if (dRead === decayTexA) {
+      dRead = decayTexB; dWrite = decayTexA; dFBO = fboDecayA;
+    } else {
+      dRead = decayTexA; dWrite = decayTexB; dFBO = fboDecayB;
+    }
   }
 
-  // Start render loop
   render();
 
-  // ══════════════════════════════════════════════
+  // ═══════════════════════════════════
   // OPACITY
-  // ══════════════════════════════════════════════
+  // ═══════════════════════════════════
   const opacityMap = {
-    0: 0.09, 1: 0.21, 2: 0.33, 3: 0.55, 4: 0.71,
-    5: 0.83, 6: 0.90, 7: 0.94, 8: 0.97, 9: 0.99
+    0:0.09, 1:0.21, 2:0.33, 3:0.55, 4:0.71,
+    5:0.83, 6:0.90, 7:0.94, 8:0.97, 9:0.99
   };
 
   for (let i = 0; i <= 9; i++) {
     const btn = document.createElement('button');
     btn.className = 'step-btn' + (i === 9 ? ' active' : '');
-    btn.innerHTML = `<i>${i}</i>`;
+    btn.innerHTML = '<i>' + i + '</i>';
     btn.dataset.level = i;
     btn.addEventListener('click', () => setOpacity(i));
     opacitySteps.appendChild(btn);
@@ -782,21 +868,16 @@
   function setOpacity(level) {
     currentLevel = level;
     canvas.style.opacity = opacityMap[level];
-
     document.querySelectorAll('.step-btn').forEach(b => {
       b.classList.toggle('active', parseInt(b.dataset.level) === level);
     });
-
-    if (level <= 7 && video.src) {
-      appEl.classList.add('hud-autohide');
-    } else {
-      appEl.classList.remove('hud-autohide');
-    }
+    if (level <= 7 && video.src) appEl.classList.add('hud-autohide');
+    else appEl.classList.remove('hud-autohide');
   }
 
-  // ══════════════════════════════════════════════
+  // ═══════════════════════════════════
   // FILE LOADING
-  // ══════════════════════════════════════════════
+  // ═══════════════════════════════════
   let currentObjectUrl = null;
 
   function loadFile(file) {
@@ -805,51 +886,35 @@
     video.src = currentObjectUrl;
     video.load();
     dropZone.classList.add('hidden');
+    fbosReady = false;
   }
 
-  browseBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    fileInput.click();
-  });
+  browseBtn.addEventListener('click', (e) => { e.stopPropagation(); fileInput.click(); });
+  fileInput.addEventListener('change', (e) => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+  video.addEventListener('loadeddata', () => { videoReady = true; });
 
-  fileInput.addEventListener('change', (e) => {
-    if (e.target.files[0]) loadFile(e.target.files[0]);
-  });
-
-  // Video ready → enable rendering
-  video.addEventListener('loadeddata', () => {
-    videoReady = true;
-  });
-
-  // Drag & drop
   document.addEventListener('dragover', (e) => e.preventDefault());
   document.addEventListener('drop', (e) => e.preventDefault());
-
-  ['dragenter', 'dragover'].forEach(evt => {
-    dropZone.addEventListener(evt, (e) => {
-      e.preventDefault();
-      dropZone.classList.add('drag-over');
-    });
+  ['dragenter','dragover'].forEach(ev => {
+    dropZone.addEventListener(ev, (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
   });
-  ['dragleave', 'drop'].forEach(evt => {
-    dropZone.addEventListener(evt, () => dropZone.classList.remove('drag-over'));
+  ['dragleave','drop'].forEach(ev => {
+    dropZone.addEventListener(ev, () => dropZone.classList.remove('drag-over'));
   });
-
   dropZone.addEventListener('drop', (e) => {
     e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('video/')) loadFile(file);
+    const f = e.dataTransfer.files[0];
+    if (f && f.type.startsWith('video/')) loadFile(f);
   });
-
   videoContainer.addEventListener('drop', (e) => {
     e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('video/')) loadFile(file);
+    const f = e.dataTransfer.files[0];
+    if (f && f.type.startsWith('video/')) loadFile(f);
   });
 
-  // ══════════════════════════════════════════════
+  // ═══════════════════════════════════
   // PLAYBACK
-  // ══════════════════════════════════════════════
+  // ═══════════════════════════════════
   const pausePath = 'M6 4h4v16H6zm8 0h4v16h-4z';
   const playPath = 'M5 3l14 9-14 9V3z';
 
@@ -858,25 +923,24 @@
     video.paused ? video.play() : video.pause();
   }
 
-  video.addEventListener('play', () => playIcon.innerHTML = `<path d="${pausePath}"/>`);
-  video.addEventListener('pause', () => playIcon.innerHTML = `<path d="${playPath}"/>`);
-
+  video.addEventListener('play', () => playIcon.innerHTML = '<path d="' + pausePath + '"/>');
+  video.addEventListener('pause', () => playIcon.innerHTML = '<path d="' + playPath + '"/>');
   playBtn.addEventListener('click', togglePlay);
   canvas.addEventListener('click', togglePlay);
 
   function fmt(s) {
     if (isNaN(s)) return '0:00';
-    return `${Math.floor(s/60)}:${Math.floor(s%60).toString().padStart(2,'0')}`;
+    return Math.floor(s/60) + ':' + Math.floor(s%60).toString().padStart(2,'0');
   }
 
-  let lastTimeUpdate = 0;
+  let lastTU = 0;
   video.addEventListener('timeupdate', () => {
     if (!video.duration) return;
     const now = performance.now();
-    if (now - lastTimeUpdate < 100) return;
-    lastTimeUpdate = now;
+    if (now - lastTU < 100) return;
+    lastTU = now;
     progressFill.style.width = (video.currentTime / video.duration * 100) + '%';
-    timeDisplay.textContent = `${fmt(video.currentTime)} / ${fmt(video.duration)}`;
+    timeDisplay.textContent = fmt(video.currentTime) + ' / ' + fmt(video.duration);
   });
 
   progressWrap.addEventListener('click', (e) => {
@@ -885,119 +949,99 @@
     video.currentTime = ((e.clientX - rect.left) / rect.width) * video.duration;
   });
 
-  // ══════════════════════════════════════════════
+  // ═══════════════════════════════════
   // FRAME STEPPING
-  // ══════════════════════════════════════════════
-  function getFrameDuration() { return 1 / 30; }
-
+  // ═══════════════════════════════════
   let seeking = false;
-
-  function stepFrame(direction) {
+  function stepFrame(dir) {
     if (!video.src || !video.duration || seeking) return;
     video.pause();
     seeking = true;
-    const delta = getFrameDuration() * direction;
-    video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + delta));
+    video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + (1/30) * dir));
   }
-
   video.addEventListener('seeked', () => { seeking = false; });
-
   framePrevBtn.addEventListener('click', () => stepFrame(-1));
   frameNextBtn.addEventListener('click', () => stepFrame(1));
 
-  // Scroll wheel = frame step (throttled)
-  let wheelLocked = false;
+  let wheelLock = false;
   videoContainer.addEventListener('wheel', (e) => {
-    if (!video.src || wheelLocked) return;
+    if (!video.src || wheelLock) return;
     e.preventDefault();
-    wheelLocked = true;
-    const direction = e.deltaY > 0 ? 1 : -1;
-    stepFrame(direction);
-    setTimeout(() => { wheelLocked = false; }, 50);
+    wheelLock = true;
+    stepFrame(e.deltaY > 0 ? -1 : 1);
+    setTimeout(() => { wheelLock = false; }, 50);
   }, { passive: false });
 
-  // ══════════════════════════════════════════════
+  // ═══════════════════════════════════
   // VOLUME
-  // ══════════════════════════════════════════════
-  const volOnPath = 'M11 5L6 9H2v6h4l5 4V5zm8.07.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07';
-  const volMutePath = 'M11 5L6 9H2v6h4l5 4V5zm12.41 3.59L21 7l-1.41-1.41L17 8.17l-2.59-2.58L13 7l2.59 2.59L13 12.17l1.41 1.41L17 11l2.59 2.59L21 12.17l-2.59-2.58z';
-  const volLowPath = 'M11 5L6 9H2v6h4l5 4V5zm4.54 3.46a5 5 0 0 1 0 7.07';
+  // ═══════════════════════════════════
+  const volOnP = 'M11 5L6 9H2v6h4l5 4V5zm8.07.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07';
+  const volMuteP = 'M11 5L6 9H2v6h4l5 4V5zm12.41 3.59L21 7l-1.41-1.41L17 8.17l-2.59-2.58L13 7l2.59 2.59L13 12.17l1.41 1.41L17 11l2.59 2.59L21 12.17l-2.59-2.58z';
+  const volLowP = 'M11 5L6 9H2v6h4l5 4V5zm4.54 3.46a5 5 0 0 1 0 7.07';
 
   function updateVolIcon() {
-    if (video.muted || video.volume === 0) {
-      volIcon.innerHTML = `<path d="${volMutePath}"/>`;
-    } else if (video.volume <= 0.5) {
-      volIcon.innerHTML = `<path d="${volLowPath}"/>`;
-    } else {
-      volIcon.innerHTML = `<path d="${volOnPath}"/>`;
-    }
+    if (video.muted || video.volume === 0) volIcon.innerHTML = '<path d="' + volMuteP + '"/>';
+    else if (video.volume <= 0.5) volIcon.innerHTML = '<path d="' + volLowP + '"/>';
+    else volIcon.innerHTML = '<path d="' + volOnP + '"/>';
   }
 
   volBtn.addEventListener('click', () => { video.muted = !video.muted; updateVolIcon(); });
   volHalfBtn.addEventListener('click', () => { video.muted = false; video.volume = 0.5; updateVolIcon(); });
 
-  // ══════════════════════════════════════════════
-  // TITLEBAR CONTROLS
-  // ══════════════════════════════════════════════
+  // ═══════════════════════════════════
+  // TITLEBAR
+  // ═══════════════════════════════════
   pinBtn.addEventListener('click', () => {
     pinned = !pinned;
     pinBtn.classList.toggle('pinned', pinned);
     ipcRenderer.send('set-always-on-top', pinned);
   });
-
   minBtn.addEventListener('click', () => ipcRenderer.send('minimize-window'));
   closeBtn.addEventListener('click', () => window.close());
 
-  // ══════════════════════════════════════════════
+  // ═══════════════════════════════════
   // FINE OPACITY
-  // ══════════════════════════════════════════════
+  // ═══════════════════════════════════
   function fineOpacity(delta) {
-    const current = parseFloat(canvas.style.opacity);
-    const val = isNaN(current) ? opacityMap[currentLevel] : current;
+    const cur = parseFloat(canvas.style.opacity);
+    const val = isNaN(cur) ? opacityMap[currentLevel] : cur;
     canvas.style.opacity = Math.max(0, Math.min(1, +(val + delta).toFixed(2)));
   }
 
-  // ══════════════════════════════════════════════
+  // ═══════════════════════════════════
   // KEYBOARD
-  // ══════════════════════════════════════════════
+  // ═══════════════════════════════════
   document.addEventListener('keydown', (e) => {
     if (e.key === ' ') { e.preventDefault(); togglePlay(); }
     else if (e.key >= '0' && e.key <= '9' && !e.shiftKey) { setOpacity(parseInt(e.key)); }
-    // Shift + arrows
     else if (e.shiftKey && e.key === 'ArrowLeft') { e.preventDefault(); video.currentTime = Math.max(0, video.currentTime - 1); }
     else if (e.shiftKey && e.key === 'ArrowRight') { e.preventDefault(); video.currentTime = Math.min(video.duration || 0, video.currentTime + 1); }
     else if (e.shiftKey && e.key === 'ArrowUp') { e.preventDefault(); if (currentLevel < 9) setOpacity(currentLevel + 1); }
     else if (e.shiftKey && e.key === 'ArrowDown') { e.preventDefault(); if (currentLevel > 0) setOpacity(currentLevel - 1); }
-    // Plain arrows
     else if (e.key === 'ArrowLeft') { e.preventDefault(); stepFrame(-1); }
     else if (e.key === 'ArrowRight') { e.preventDefault(); stepFrame(1); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); fineOpacity(0.01); }
     else if (e.key === 'ArrowDown') { e.preventDefault(); fineOpacity(-0.01); }
-    // Frame step keys
     else if (e.key === ',') { e.preventDefault(); stepFrame(-1); }
     else if (e.key === '.') { e.preventDefault(); stepFrame(1); }
-    // Glitch toggles
-    else if (e.key === 'c') { cycleGlitch('chromatic', glitchCBtn, 'active-c'); }
-    else if (e.key === 'v') { cycleGlitch('melt', glitchMBtn, 'active-m'); }
-    else if (e.key === 'b') { cycleGlitch('signal', glitchSBtn, 'active-s'); }
-    // Other
+    else if (e.key === 'c') { cycleGlitch('chromatic', glitchCBtn); }
+    else if (e.key === 'v') { cycleGlitch('melt', glitchMBtn); }
+    else if (e.key === 'b') { cycleGlitch('signal', glitchSBtn); }
+    else if (e.key === 'd') { cycleGlitch('decay', glitchDBtn); }
+    else if (e.key === 'r') { resetAllGlitches(); }
     else if (e.key === 'm') { video.muted = !video.muted; updateVolIcon(); }
     else if (e.key === 'h') { appEl.classList.toggle('hud-autohide'); }
     else if (e.key === 'Escape') { window.close(); }
   });
 
-  // ══════════════════════════════════════════════
-  // ERROR RECOVERY & CLEANUP
-  // ══════════════════════════════════════════════
-  video.addEventListener('error', (e) => {
-    console.error('Video error:', video.error?.message || 'unknown');
+  // ═══════════════════════════════════
+  // CLEANUP
+  // ═══════════════════════════════════
+  video.addEventListener('error', () => {
     const pos = video.currentTime;
-    const src = video.src;
-    if (src) {
+    if (video.src) {
       video.load();
-      video.addEventListener('loadedmetadata', () => {
-        video.currentTime = pos;
-      }, { once: true });
+      video.addEventListener('loadedmetadata', () => { video.currentTime = pos; }, { once: true });
     }
   });
 
@@ -1009,7 +1053,6 @@
     video.load();
   });
 
-  // ── Loop by default ──
   video.loop = true;
 </script>
 </body>
