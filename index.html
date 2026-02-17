@@ -41,8 +41,7 @@
     justify-content: space-between;
     height: 32px;
     padding: 0 10px;
-    background: rgba(10,10,12,0.65);
-    backdrop-filter: blur(6px);
+    background: rgba(10,10,12,0.85);
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
   }
@@ -107,8 +106,7 @@
     gap: 10px;
     border: 1.5px dashed rgba(255,255,255,0.12);
     border-radius: 8px;
-    background: rgba(10,10,12,0.4);
-    backdrop-filter: blur(4px);
+    background: rgba(10,10,12,0.6);
     z-index: 10;
     transition: all 0.2s;
   }
@@ -140,8 +138,7 @@
   /* ── Bottom HUD ── */
   .hud {
     flex-shrink: 0;
-    background: rgba(10,10,12,0.65);
-    backdrop-filter: blur(6px);
+    background: rgba(10,10,12,0.85);
     border-top: 1px solid var(--border);
     padding: 8px 12px;
     display: flex;
@@ -384,8 +381,15 @@
   }
 
   // ── File loading ──
+  let currentObjectUrl = null;
+
   function loadFile(file) {
-    video.src = URL.createObjectURL(file);
+    // Revoke previous URL to prevent memory leak
+    if (currentObjectUrl) {
+      URL.revokeObjectURL(currentObjectUrl);
+    }
+    currentObjectUrl = URL.createObjectURL(file);
+    video.src = currentObjectUrl;
     video.load();
     dropZone.classList.add('hidden');
   }
@@ -445,8 +449,12 @@
     return `${Math.floor(s/60)}:${Math.floor(s%60).toString().padStart(2,'0')}`;
   }
 
+  let lastTimeUpdate = 0;
   video.addEventListener('timeupdate', () => {
     if (!video.duration) return;
+    const now = performance.now();
+    if (now - lastTimeUpdate < 100) return;  // cap at ~10 updates/sec
+    lastTimeUpdate = now;
     progressFill.style.width = (video.currentTime / video.duration * 100) + '%';
     timeDisplay.textContent = `${fmt(video.currentTime)} / ${fmt(video.duration)}`;
   });
@@ -463,23 +471,30 @@
     return 1 / 30;
   }
 
+  let seeking = false;
+
   function stepFrame(direction) {
-    if (!video.src || !video.duration) return;
+    if (!video.src || !video.duration || seeking) return;
     video.pause();
+    seeking = true;
     const delta = getFrameDuration() * direction;
     video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + delta));
   }
 
+  video.addEventListener('seeked', () => { seeking = false; });
+
   framePrevBtn.addEventListener('click', () => stepFrame(-1));
   frameNextBtn.addEventListener('click', () => stepFrame(1));
 
-  // Scroll wheel on video area = frame step
+  // Scroll wheel on video area = frame step (throttled to prevent GPU overload)
+  let wheelLocked = false;
   videoContainer.addEventListener('wheel', (e) => {
-    if (!video.src) return;
+    if (!video.src || wheelLocked) return;
     e.preventDefault();
-    // Scroll up or left = previous frame, down or right = next frame
+    wheelLocked = true;
     const direction = e.deltaY > 0 ? -1 : 1;
     stepFrame(direction);
+    setTimeout(() => { wheelLocked = false; }, 50);
   }, { passive: false });
 
   // ── Volume control ──
@@ -547,6 +562,28 @@
     else if (e.key === 'm') { video.muted = !video.muted; updateVolIcon(); }
     else if (e.key === 'h') { appEl.classList.toggle('hud-autohide'); }
     else if (e.key === 'Escape') { window.close(); }
+  });
+
+  // ── Video error recovery ──
+  video.addEventListener('error', (e) => {
+    console.error('Video error:', video.error?.message || 'unknown');
+    // Attempt to recover by reloading from same position
+    const pos = video.currentTime;
+    const src = video.src;
+    if (src) {
+      video.load();
+      video.addEventListener('loadedmetadata', () => {
+        video.currentTime = pos;
+      }, { once: true });
+    }
+  });
+
+  // ── Cleanup on window close ──
+  window.addEventListener('beforeunload', () => {
+    if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
   });
 
   // ── Loop by default ──
