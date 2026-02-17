@@ -16,6 +16,9 @@
     --text-dim: #666;
     --border: rgba(255,255,255,0.08);
     --mono: 'DM Mono', monospace;
+    --glow-c: #ff3366;
+    --glow-m: #aa44ff;
+    --glow-s: #33ff88;
   }
 
   html, body {
@@ -77,7 +80,7 @@
   .tb-minimize { background: #ffbd2e; }
   .tb-close { background: #ff5f57; }
 
-  /* ── Video area ── */
+  /* ── Video / Canvas area ── */
   .video-container {
     flex: 1;
     position: relative;
@@ -89,6 +92,10 @@
   }
 
   video {
+    display: none;
+  }
+
+  canvas#glCanvas {
     width: 100%;
     height: 100%;
     object-fit: contain;
@@ -153,7 +160,7 @@
     gap: 10px;
   }
 
-  /* Play button */
+  /* Control buttons */
   .ctrl-btn {
     background: none; border: none;
     cursor: pointer; padding: 2px;
@@ -164,6 +171,61 @@
   }
   .ctrl-btn:hover { color: var(--text); }
   .ctrl-btn svg { width: 16px; height: 16px; fill: currentColor; }
+
+  /* ── Glitch buttons ── */
+  .glitch-sep {
+    width: 1px;
+    height: 16px;
+    background: var(--border);
+    margin: 0 2px;
+    flex-shrink: 0;
+  }
+
+  .glitch-btn {
+    background: none;
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 3px;
+    cursor: pointer;
+    padding: 2px 6px;
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    transition: all 0.15s;
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  .glitch-btn:hover {
+    border-color: rgba(255,255,255,0.2);
+    color: var(--text);
+  }
+
+  .glitch-btn.active-c {
+    color: var(--glow-c);
+    border-color: var(--glow-c);
+    box-shadow: 0 0 8px rgba(255, 51, 102, 0.3);
+  }
+
+  .glitch-btn.active-m {
+    color: var(--glow-m);
+    border-color: var(--glow-m);
+    box-shadow: 0 0 8px rgba(170, 68, 255, 0.3);
+  }
+
+  .glitch-btn.active-s {
+    color: var(--glow-s);
+    border-color: var(--glow-s);
+    box-shadow: 0 0 8px rgba(51, 255, 136, 0.3);
+  }
+
+  .glitch-btn .intensity-dots {
+    display: inline-block;
+    margin-left: 3px;
+    letter-spacing: 1px;
+  }
 
   /* Progress */
   .progress-wrap {
@@ -267,7 +329,8 @@
   </div>
 
   <div class="video-container" id="videoContainer">
-    <video id="video" preload="metadata"></video>
+    <video id="video" preload="metadata" crossorigin="anonymous"></video>
+    <canvas id="glCanvas"></canvas>
     <div class="drop-zone" id="dropZone">
       <div class="drop-icon">
         <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
@@ -302,6 +365,10 @@
       <button class="ctrl-btn" id="volHalfBtn" title="50% volume">
         <svg viewBox="0 0 24 24" style="width:12px;height:12px;"><text x="1" y="17" font-size="16" fill="currentColor" font-family="monospace">½</text></svg>
       </button>
+      <div class="glitch-sep"></div>
+      <button class="glitch-btn" id="glitchC" title="Chromatic RGB Split (C)">C<span class="intensity-dots"></span></button>
+      <button class="glitch-btn" id="glitchM" title="Melt Datamosh (V)">M<span class="intensity-dots"></span></button>
+      <button class="glitch-btn" id="glitchS" title="Signal Corruption (B)">S<span class="intensity-dots"></span></button>
       <div class="time-display" id="timeDisplay">0:00 / 0:00</div>
     </div>
     <div class="hud-row opacity-row">
@@ -313,10 +380,221 @@
 
 <input type="file" id="fileInput" accept="video/*" style="display:none">
 
+<!-- ════════════════════════════════════════════════════════════════
+     VERTEX SHADER
+     ════════════════════════════════════════════════════════════════ -->
+<script id="vs" type="x-shader/x-vertex">
+  attribute vec2 a_position;
+  attribute vec2 a_texCoord;
+  varying vec2 v_uv;
+  void main() {
+    gl_Position = vec4(a_position, 0.0, 1.0);
+    v_uv = a_texCoord;
+  }
+</script>
+
+<!-- ════════════════════════════════════════════════════════════════
+     FRAGMENT SHADER — all 3 glitch effects in one pass
+     ════════════════════════════════════════════════════════════════ -->
+<script id="fs" type="x-shader/x-fragment">
+  precision mediump float;
+
+  varying vec2 v_uv;
+  uniform sampler2D u_video;
+  uniform vec2 u_resolution;
+  uniform float u_time;
+
+  // Effect intensities (0.0 = off, 0.33 = low, 0.66 = med, 1.0 = high)
+  uniform float u_chromatic;
+  uniform float u_melt;
+  uniform float u_signal;
+
+  // ── Noise helpers ──
+  float hash(float n) {
+    return fract(sin(n) * 43758.5453123);
+  }
+
+  float hash2(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+  }
+
+  float noise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float a = hash2(i);
+    float b = hash2(i + vec2(1.0, 0.0));
+    float c = hash2(i + vec2(0.0, 1.0));
+    float d = hash2(i + vec2(1.0, 1.0));
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+  }
+
+  // Block noise for datamosh feel
+  float blockNoise(vec2 uv, float blockSize) {
+    vec2 block = floor(uv * blockSize) / blockSize;
+    return hash2(block + floor(u_time * 2.0));
+  }
+
+  void main() {
+    vec2 uv = v_uv;
+    vec4 color;
+
+    // ════════════════════════════════════════════
+    // EFFECT 1: MELT (Datamosh displacement)
+    // ════════════════════════════════════════════
+    if (u_melt > 0.0) {
+      float intensity = u_melt;
+
+      // Create blocky displacement zones
+      float blockSize = mix(8.0, 4.0, intensity);
+      vec2 block = floor(uv * blockSize);
+      float trigger = hash2(block + floor(u_time * 1.5));
+
+      // Only displace some blocks (more blocks at higher intensity)
+      float threshold = mix(0.8, 0.4, intensity);
+
+      if (trigger > threshold) {
+        // Displacement direction from noise
+        float angle = hash2(block * 7.77 + floor(u_time * 2.0)) * 6.2831;
+        float dist = hash2(block * 3.33 + floor(u_time * 1.8)) * intensity * 0.12;
+
+        uv += vec2(cos(angle), sin(angle)) * dist;
+
+        // Smear: blend with a time-offset sample for ghosting
+        float smear = noise(block * 5.0 + u_time) * intensity * 0.06;
+        uv.y += smear;
+      }
+
+      // Macro displacement waves (the smooth melting feel)
+      float wave = noise(vec2(uv.y * 3.0, u_time * 0.7)) * 2.0 - 1.0;
+      uv.x += wave * intensity * 0.025;
+    }
+
+    // ════════════════════════════════════════════
+    // EFFECT 3: SIGNAL (Scanline corruption)
+    // ════════════════════════════════════════════
+    if (u_signal > 0.0) {
+      float intensity = u_signal;
+
+      // Scanline groups with random horizontal shift
+      float scanH = mix(80.0, 30.0, intensity);
+      float scanGroup = floor(uv.y * scanH);
+      float groupSeed = hash(scanGroup + floor(u_time * 4.0) * 99.0);
+
+      // Only shift some scanline groups
+      float shiftThreshold = mix(0.85, 0.55, intensity);
+      if (groupSeed > shiftThreshold) {
+        float shiftAmount = (hash(scanGroup * 17.0 + floor(u_time * 6.0)) * 2.0 - 1.0);
+        uv.x += shiftAmount * intensity * 0.15;
+      }
+
+      // Occasional full-width tears
+      float tearSeed = hash(floor(u_time * 3.0) + 0.5);
+      if (tearSeed > 0.7) {
+        float tearY = hash(floor(u_time * 5.0)) ;
+        float tearWidth = 0.005 + intensity * 0.02;
+        if (abs(uv.y - tearY) < tearWidth) {
+          uv.x += (hash(uv.y * 500.0 + u_time) * 2.0 - 1.0) * intensity * 0.3;
+        }
+      }
+
+      // Subtle vertical jitter
+      uv.y += (hash(floor(u_time * 8.0)) * 2.0 - 1.0) * intensity * 0.003;
+    }
+
+    // Clamp UV after displacement
+    uv = clamp(uv, 0.0, 1.0);
+
+    // ════════════════════════════════════════════
+    // EFFECT 2: CHROMATIC (RGB Channel Split)
+    // ════════════════════════════════════════════
+    if (u_chromatic > 0.0) {
+      float intensity = u_chromatic;
+
+      // Base offset that shifts over time
+      float angle = u_time * 0.5;
+      vec2 dir = vec2(cos(angle), sin(angle));
+      float offset = intensity * 0.015;
+
+      // Add some wobble for organic feel
+      float wobble = sin(uv.y * 20.0 + u_time * 3.0) * intensity * 0.003;
+
+      vec2 rOff = dir * (offset + wobble);
+      vec2 bOff = -dir * (offset + wobble);
+
+      // Green stays centered, R and B split apart
+      float r = texture2D(u_video, clamp(uv + rOff, 0.0, 1.0)).r;
+      float g = texture2D(u_video, uv).g;
+      float b = texture2D(u_video, clamp(uv + bOff, 0.0, 1.0)).b;
+
+      color = vec4(r, g, b, 1.0);
+    } else {
+      color = texture2D(u_video, uv);
+    }
+
+    // ════════════════════════════════════════════
+    // SIGNAL post-pass: color banding + noise
+    // ════════════════════════════════════════════
+    if (u_signal > 0.0) {
+      float intensity = u_signal;
+
+      // Scanline darkening
+      float scanline = sin(v_uv.y * u_resolution.y * 1.5) * 0.5 + 0.5;
+      color.rgb *= 1.0 - scanline * intensity * 0.15;
+
+      // Color channel noise (the green/purple you love)
+      float cn = hash2(v_uv * u_resolution + floor(u_time * 10.0)) * 2.0 - 1.0;
+      color.r += cn * intensity * 0.08;
+      color.g -= cn * intensity * 0.06;
+      color.b += cn * intensity * 0.1;
+
+      // Random color band flashes
+      float bandSeed = hash(floor(v_uv.y * 20.0) + floor(u_time * 5.0));
+      if (bandSeed > mix(0.95, 0.8, intensity)) {
+        color.rgb = mix(color.rgb, vec3(cn * 0.5 + 0.5, 1.0 - color.g, color.b * 0.5), intensity * 0.6);
+      }
+    }
+
+    // ════════════════════════════════════════════
+    // MELT post-pass: color bleed between channels
+    // ════════════════════════════════════════════
+    if (u_melt > 0.0) {
+      float intensity = u_melt;
+
+      // Block-based color shift (green/magenta bleeding)
+      float blockSize = mix(12.0, 6.0, intensity);
+      float bn = blockNoise(v_uv, blockSize);
+
+      if (bn > mix(0.85, 0.6, intensity)) {
+        // Shift hue by swapping/blending channels
+        float shift = hash2(floor(v_uv * blockSize) + floor(u_time * 2.0));
+        if (shift > 0.5) {
+          color.rgb = mix(color.rgb, color.grb, intensity * 0.5);  // green-magenta shift
+        } else {
+          color.rgb = mix(color.rgb, color.brg, intensity * 0.4);  // cyan-purple shift
+        }
+      }
+
+      // Smooth noise overlay (the "smooth noise" you described)
+      float smoothN = noise(v_uv * 8.0 + u_time * 0.5);
+      color.g += smoothN * intensity * 0.05;
+      color.b -= smoothN * intensity * 0.03;
+    }
+
+    // Ensure valid color range
+    color.rgb = clamp(color.rgb, 0.0, 1.0);
+    color.a = 1.0;
+
+    gl_FragColor = color;
+  }
+</script>
+
 <script>
   const { ipcRenderer } = require('electron');
 
+  // ── DOM refs ──
   const video = document.getElementById('video');
+  const canvas = document.getElementById('glCanvas');
   const dropZone = document.getElementById('dropZone');
   const playBtn = document.getElementById('playBtn');
   const playIcon = document.getElementById('playIcon');
@@ -336,25 +614,162 @@
   const volBtn = document.getElementById('volBtn');
   const volHalfBtn = document.getElementById('volHalfBtn');
   const volIcon = document.getElementById('volIcon');
+  const glitchCBtn = document.getElementById('glitchC');
+  const glitchMBtn = document.getElementById('glitchM');
+  const glitchSBtn = document.getElementById('glitchS');
 
   let currentLevel = 9;
   let pinned = true;
 
-  // ── Research-tuned opacity curve ──
+  // ══════════════════════════════════════════════
+  // WEBGL SETUP
+  // ══════════════════════════════════════════════
+  const gl = canvas.getContext('webgl', {
+    premultipliedAlpha: false,
+    alpha: true,
+    preserveDrawingBuffer: false,
+    antialias: false,
+  });
+
+  function compileShader(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+      console.error('Shader error:', gl.getShaderInfoLog(s));
+      return null;
+    }
+    return s;
+  }
+
+  const vs = compileShader(gl.VERTEX_SHADER, document.getElementById('vs').textContent);
+  const fs = compileShader(gl.FRAGMENT_SHADER, document.getElementById('fs').textContent);
+
+  const program = gl.createProgram();
+  gl.attachShader(program, vs);
+  gl.attachShader(program, fs);
+  gl.linkProgram(program);
+
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    console.error('Program link error:', gl.getProgramInfoLog(program));
+  }
+
+  gl.useProgram(program);
+
+  // Geometry: full-screen quad
+  const posBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+    -1, -1,  1, -1,  -1, 1,
+    -1,  1,  1, -1,   1, 1,
+  ]), gl.STATIC_DRAW);
+
+  const posLoc = gl.getAttribLocation(program, 'a_position');
+  gl.enableVertexAttribArray(posLoc);
+  gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+
+  const tcBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, tcBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+    0, 1,  1, 1,  0, 0,
+    0, 0,  1, 1,  1, 0,
+  ]), gl.STATIC_DRAW);
+
+  const tcLoc = gl.getAttribLocation(program, 'a_texCoord');
+  gl.enableVertexAttribArray(tcLoc);
+  gl.vertexAttribPointer(tcLoc, 2, gl.FLOAT, false, 0, 0);
+
+  // Video texture
+  const tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+  // Uniform locations
+  const uVideo = gl.getUniformLocation(program, 'u_video');
+  const uResolution = gl.getUniformLocation(program, 'u_resolution');
+  const uTime = gl.getUniformLocation(program, 'u_time');
+  const uChromatic = gl.getUniformLocation(program, 'u_chromatic');
+  const uMelt = gl.getUniformLocation(program, 'u_melt');
+  const uSignal = gl.getUniformLocation(program, 'u_signal');
+
+  gl.uniform1i(uVideo, 0);
+
+  // ── Glitch state ──
+  // Each effect cycles: 0 (off) → 0.33 (low) → 0.66 (med) → 1.0 (high) → 0 (off)
+  const glitchState = { chromatic: 0, melt: 0, signal: 0 };
+  const intensityLevels = [0, 0.33, 0.66, 1.0];
+  const dotChars = ['', '·', '··', '···'];
+
+  function cycleGlitch(effect, btn, activeClass) {
+    const idx = intensityLevels.indexOf(glitchState[effect]);
+    const next = (idx + 1) % intensityLevels.length;
+    glitchState[effect] = intensityLevels[next];
+
+    btn.classList.toggle(activeClass, next > 0);
+    btn.querySelector('.intensity-dots').textContent = dotChars[next];
+  }
+
+  glitchCBtn.addEventListener('click', () => cycleGlitch('chromatic', glitchCBtn, 'active-c'));
+  glitchMBtn.addEventListener('click', () => cycleGlitch('melt', glitchMBtn, 'active-m'));
+  glitchSBtn.addEventListener('click', () => cycleGlitch('signal', glitchSBtn, 'active-s'));
+
+  // ── Render loop ──
+  let videoReady = false;
+  let animId = null;
+  const startTime = performance.now();
+
+  function resizeCanvas() {
+    const w = videoContainer.clientWidth;
+    const h = videoContainer.clientHeight;
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+      gl.viewport(0, 0, w, h);
+    }
+  }
+
+  function render() {
+    animId = requestAnimationFrame(render);
+
+    if (!videoReady) return;
+
+    resizeCanvas();
+
+    const t = (performance.now() - startTime) / 1000.0;
+
+    // Upload video frame to texture
+    try {
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+    } catch (e) {
+      return; // Video not ready yet
+    }
+
+    // Set uniforms
+    gl.uniform2f(uResolution, canvas.width, canvas.height);
+    gl.uniform1f(uTime, t);
+    gl.uniform1f(uChromatic, glitchState.chromatic);
+    gl.uniform1f(uMelt, glitchState.melt);
+    gl.uniform1f(uSignal, glitchState.signal);
+
+    // Draw
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+  }
+
+  // Start render loop
+  render();
+
+  // ══════════════════════════════════════════════
+  // OPACITY
+  // ══════════════════════════════════════════════
   const opacityMap = {
-    0: 0.09,
-    1: 0.21,
-    2: 0.33,
-    3: 0.55,
-    4: 0.71,
-    5: 0.83,
-    6: 0.90,
-    7: 0.94,
-    8: 0.97,
-    9: 0.99
+    0: 0.09, 1: 0.21, 2: 0.33, 3: 0.55, 4: 0.71,
+    5: 0.83, 6: 0.90, 7: 0.94, 8: 0.97, 9: 0.99
   };
 
-  // ── Opacity steps ──
   for (let i = 0; i <= 9; i++) {
     const btn = document.createElement('button');
     btn.className = 'step-btn' + (i === 9 ? ' active' : '');
@@ -366,13 +781,12 @@
 
   function setOpacity(level) {
     currentLevel = level;
-    video.style.opacity = opacityMap[level];
+    canvas.style.opacity = opacityMap[level];
 
     document.querySelectorAll('.step-btn').forEach(b => {
       b.classList.toggle('active', parseInt(b.dataset.level) === level);
     });
 
-    // Auto-hide HUD at level 7 and below
     if (level <= 7 && video.src) {
       appEl.classList.add('hud-autohide');
     } else {
@@ -380,14 +794,13 @@
     }
   }
 
-  // ── File loading ──
+  // ══════════════════════════════════════════════
+  // FILE LOADING
+  // ══════════════════════════════════════════════
   let currentObjectUrl = null;
 
   function loadFile(file) {
-    // Revoke previous URL to prevent memory leak
-    if (currentObjectUrl) {
-      URL.revokeObjectURL(currentObjectUrl);
-    }
+    if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
     currentObjectUrl = URL.createObjectURL(file);
     video.src = currentObjectUrl;
     video.load();
@@ -401,6 +814,11 @@
 
   fileInput.addEventListener('change', (e) => {
     if (e.target.files[0]) loadFile(e.target.files[0]);
+  });
+
+  // Video ready → enable rendering
+  video.addEventListener('loadeddata', () => {
+    videoReady = true;
   });
 
   // Drag & drop
@@ -429,7 +847,9 @@
     if (file && file.type.startsWith('video/')) loadFile(file);
   });
 
-  // ── Playback ──
+  // ══════════════════════════════════════════════
+  // PLAYBACK
+  // ══════════════════════════════════════════════
   const pausePath = 'M6 4h4v16H6zm8 0h4v16h-4z';
   const playPath = 'M5 3l14 9-14 9V3z';
 
@@ -442,7 +862,7 @@
   video.addEventListener('pause', () => playIcon.innerHTML = `<path d="${playPath}"/>`);
 
   playBtn.addEventListener('click', togglePlay);
-  video.addEventListener('click', togglePlay);
+  canvas.addEventListener('click', togglePlay);
 
   function fmt(s) {
     if (isNaN(s)) return '0:00';
@@ -453,7 +873,7 @@
   video.addEventListener('timeupdate', () => {
     if (!video.duration) return;
     const now = performance.now();
-    if (now - lastTimeUpdate < 100) return;  // cap at ~10 updates/sec
+    if (now - lastTimeUpdate < 100) return;
     lastTimeUpdate = now;
     progressFill.style.width = (video.currentTime / video.duration * 100) + '%';
     timeDisplay.textContent = `${fmt(video.currentTime)} / ${fmt(video.duration)}`;
@@ -465,11 +885,10 @@
     video.currentTime = ((e.clientX - rect.left) / rect.width) * video.duration;
   });
 
-  // ── Frame stepping ──
-  // Assumes ~30fps if video doesn't report framerate
-  function getFrameDuration() {
-    return 1 / 30;
-  }
+  // ══════════════════════════════════════════════
+  // FRAME STEPPING
+  // ══════════════════════════════════════════════
+  function getFrameDuration() { return 1 / 30; }
 
   let seeking = false;
 
@@ -486,18 +905,20 @@
   framePrevBtn.addEventListener('click', () => stepFrame(-1));
   frameNextBtn.addEventListener('click', () => stepFrame(1));
 
-  // Scroll wheel on video area = frame step (throttled to prevent GPU overload)
+  // Scroll wheel = frame step (throttled)
   let wheelLocked = false;
   videoContainer.addEventListener('wheel', (e) => {
     if (!video.src || wheelLocked) return;
     e.preventDefault();
     wheelLocked = true;
-    const direction = e.deltaY > 0 ? -1 : 1;
+    const direction = e.deltaY > 0 ? 1 : -1;
     stepFrame(direction);
     setTimeout(() => { wheelLocked = false; }, 50);
   }, { passive: false });
 
-  // ── Volume control ──
+  // ══════════════════════════════════════════════
+  // VOLUME
+  // ══════════════════════════════════════════════
   const volOnPath = 'M11 5L6 9H2v6h4l5 4V5zm8.07.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07';
   const volMutePath = 'M11 5L6 9H2v6h4l5 4V5zm12.41 3.59L21 7l-1.41-1.41L17 8.17l-2.59-2.58L13 7l2.59 2.59L13 12.17l1.41 1.41L17 11l2.59 2.59L21 12.17l-2.59-2.58z';
   const volLowPath = 'M11 5L6 9H2v6h4l5 4V5zm4.54 3.46a5 5 0 0 1 0 7.07';
@@ -512,62 +933,64 @@
     }
   }
 
-  volBtn.addEventListener('click', () => {
-    video.muted = !video.muted;
-    updateVolIcon();
-  });
+  volBtn.addEventListener('click', () => { video.muted = !video.muted; updateVolIcon(); });
+  volHalfBtn.addEventListener('click', () => { video.muted = false; video.volume = 0.5; updateVolIcon(); });
 
-  volHalfBtn.addEventListener('click', () => {
-    video.muted = false;
-    video.volume = 0.5;
-    updateVolIcon();
-  });
-
-  // ── Titlebar controls ──
+  // ══════════════════════════════════════════════
+  // TITLEBAR CONTROLS
+  // ══════════════════════════════════════════════
   pinBtn.addEventListener('click', () => {
     pinned = !pinned;
     pinBtn.classList.toggle('pinned', pinned);
     ipcRenderer.send('set-always-on-top', pinned);
   });
 
-  minBtn.addEventListener('click', () => {
-    ipcRenderer.send('minimize-window');
-  });
-
+  minBtn.addEventListener('click', () => ipcRenderer.send('minimize-window'));
   closeBtn.addEventListener('click', () => window.close());
 
-  // ── Fine opacity control ──
+  // ══════════════════════════════════════════════
+  // FINE OPACITY
+  // ══════════════════════════════════════════════
   function fineOpacity(delta) {
-    const current = parseFloat(video.style.opacity);
+    const current = parseFloat(canvas.style.opacity);
     const val = isNaN(current) ? opacityMap[currentLevel] : current;
-    video.style.opacity = Math.max(0, Math.min(1, +(val + delta).toFixed(2)));
+    canvas.style.opacity = Math.max(0, Math.min(1, +(val + delta).toFixed(2)));
   }
 
-  // ── Keyboard ──
+  // ══════════════════════════════════════════════
+  // KEYBOARD
+  // ══════════════════════════════════════════════
   document.addEventListener('keydown', (e) => {
     if (e.key === ' ') { e.preventDefault(); togglePlay(); }
     else if (e.key >= '0' && e.key <= '9' && !e.shiftKey) { setOpacity(parseInt(e.key)); }
-    // Shift + arrows: seek ±1s, opacity level up/down
+    // Shift + arrows
     else if (e.shiftKey && e.key === 'ArrowLeft') { e.preventDefault(); video.currentTime = Math.max(0, video.currentTime - 1); }
     else if (e.shiftKey && e.key === 'ArrowRight') { e.preventDefault(); video.currentTime = Math.min(video.duration || 0, video.currentTime + 1); }
     else if (e.shiftKey && e.key === 'ArrowUp') { e.preventDefault(); if (currentLevel < 9) setOpacity(currentLevel + 1); }
     else if (e.shiftKey && e.key === 'ArrowDown') { e.preventDefault(); if (currentLevel > 0) setOpacity(currentLevel - 1); }
-    // Plain arrows: frame step, fine opacity
+    // Plain arrows
     else if (e.key === 'ArrowLeft') { e.preventDefault(); stepFrame(-1); }
     else if (e.key === 'ArrowRight') { e.preventDefault(); stepFrame(1); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); fineOpacity(0.01); }
     else if (e.key === 'ArrowDown') { e.preventDefault(); fineOpacity(-0.01); }
+    // Frame step keys
     else if (e.key === ',') { e.preventDefault(); stepFrame(-1); }
     else if (e.key === '.') { e.preventDefault(); stepFrame(1); }
+    // Glitch toggles
+    else if (e.key === 'c') { cycleGlitch('chromatic', glitchCBtn, 'active-c'); }
+    else if (e.key === 'v') { cycleGlitch('melt', glitchMBtn, 'active-m'); }
+    else if (e.key === 'b') { cycleGlitch('signal', glitchSBtn, 'active-s'); }
+    // Other
     else if (e.key === 'm') { video.muted = !video.muted; updateVolIcon(); }
     else if (e.key === 'h') { appEl.classList.toggle('hud-autohide'); }
     else if (e.key === 'Escape') { window.close(); }
   });
 
-  // ── Video error recovery ──
+  // ══════════════════════════════════════════════
+  // ERROR RECOVERY & CLEANUP
+  // ══════════════════════════════════════════════
   video.addEventListener('error', (e) => {
     console.error('Video error:', video.error?.message || 'unknown');
-    // Attempt to recover by reloading from same position
     const pos = video.currentTime;
     const src = video.src;
     if (src) {
@@ -578,8 +1001,8 @@
     }
   });
 
-  // ── Cleanup on window close ──
   window.addEventListener('beforeunload', () => {
+    if (animId) cancelAnimationFrame(animId);
     if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
     video.pause();
     video.removeAttribute('src');
