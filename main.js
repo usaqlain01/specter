@@ -30,6 +30,10 @@ function createWindow() {
     win.setAlwaysOnTop(on);
   });
 
+  ipcMain.on('minimize-window', () => {
+    win.minimize();
+  });
+
   win.on('closed', () => { win = null; });
 }
 

@@ -75,6 +75,7 @@
   .tb-btn:hover { opacity: 1; }
   .tb-pin { background: #5ac8fa; }
   .tb-pin.pinned { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+  .tb-minimize { background: #ffbd2e; }
   .tb-close { background: #ff5f57; }
 
   /* ── Video area ── */
@@ -263,6 +264,7 @@
     <div class="titlebar-label"><span>👻</span> specter</div>
     <div class="titlebar-controls">
       <button class="tb-btn tb-pin pinned" id="pinBtn" title="Always on top"></button>
+      <button class="tb-btn tb-minimize" id="minBtn" title="Minimize"></button>
       <button class="tb-btn tb-close" id="closeBtn" title="Close"></button>
     </div>
   </div>
@@ -283,14 +285,26 @@
 
   <div class="hud" id="hud">
     <div class="hud-row">
-      <button class="ctrl-btn" id="playBtn">
+      <button class="ctrl-btn" id="playBtn" title="Play/Pause">
         <svg viewBox="0 0 24 24" id="playIcon"><path d="M5 3l14 9-14 9V3z"/></svg>
+      </button>
+      <button class="ctrl-btn" id="framePrevBtn" title="Previous frame ( , )">
+        <svg viewBox="0 0 24 24"><path d="M19 20L9 12l10-8v16zM5 4h2v16H5V4z"/></svg>
+      </button>
+      <button class="ctrl-btn" id="frameNextBtn" title="Next frame ( . )">
+        <svg viewBox="0 0 24 24"><path d="M5 4l10 8-10 8V4zm12 0h2v16h-2V4z"/></svg>
       </button>
       <div class="progress-wrap" id="progressWrap">
         <div class="progress-track">
           <div class="progress-fill" id="progressFill"></div>
         </div>
       </div>
+      <button class="ctrl-btn" id="volBtn" title="Toggle mute (M)">
+        <svg viewBox="0 0 24 24" id="volIcon"><path d="M11 5L6 9H2v6h4l5 4V5zm8.07.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+      </button>
+      <button class="ctrl-btn" id="volHalfBtn" title="50% volume">
+        <svg viewBox="0 0 24 24" style="width:12px;height:12px;"><text x="1" y="17" font-size="16" fill="currentColor" font-family="monospace">½</text></svg>
+      </button>
       <div class="time-display" id="timeDisplay">0:00 / 0:00</div>
     </div>
     <div class="hud-row opacity-row">
@@ -316,12 +330,32 @@
   const fileInput = document.getElementById('fileInput');
   const browseBtn = document.getElementById('browseBtn');
   const pinBtn = document.getElementById('pinBtn');
+  const minBtn = document.getElementById('minBtn');
   const closeBtn = document.getElementById('closeBtn');
   const appEl = document.getElementById('app');
   const videoContainer = document.getElementById('videoContainer');
+  const framePrevBtn = document.getElementById('framePrevBtn');
+  const frameNextBtn = document.getElementById('frameNextBtn');
+  const volBtn = document.getElementById('volBtn');
+  const volHalfBtn = document.getElementById('volHalfBtn');
+  const volIcon = document.getElementById('volIcon');
 
   let currentLevel = 9;
   let pinned = true;
+
+  // ── Research-tuned opacity curve ──
+  const opacityMap = {
+    0: 0.09,
+    1: 0.21,
+    2: 0.33,
+    3: 0.55,
+    4: 0.71,
+    5: 0.83,
+    6: 0.90,
+    7: 0.94,
+    8: 0.97,
+    9: 0.99
+  };
 
   // ── Opacity steps ──
   for (let i = 0; i <= 9; i++) {
@@ -335,15 +369,14 @@
 
   function setOpacity(level) {
     currentLevel = level;
-    const opacity = level === 0 ? 0 : level / 9;
-    video.style.opacity = opacity;
+    video.style.opacity = opacityMap[level];
 
     document.querySelectorAll('.step-btn').forEach(b => {
       b.classList.toggle('active', parseInt(b.dataset.level) === level);
     });
 
-    // Auto-hide HUD at very low opacities
-    if (level <= 3 && video.src) {
+    // Auto-hide HUD at level 7 and below
+    if (level <= 7 && video.src) {
       appEl.classList.add('hud-autohide');
     } else {
       appEl.classList.remove('hud-autohide');
@@ -424,11 +457,66 @@
     video.currentTime = ((e.clientX - rect.left) / rect.width) * video.duration;
   });
 
+  // ── Frame stepping ──
+  // Assumes ~30fps if video doesn't report framerate
+  function getFrameDuration() {
+    return 1 / 30;
+  }
+
+  function stepFrame(direction) {
+    if (!video.src || !video.duration) return;
+    video.pause();
+    const delta = getFrameDuration() * direction;
+    video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + delta));
+  }
+
+  framePrevBtn.addEventListener('click', () => stepFrame(-1));
+  frameNextBtn.addEventListener('click', () => stepFrame(1));
+
+  // Scroll wheel on video area = frame step
+  videoContainer.addEventListener('wheel', (e) => {
+    if (!video.src) return;
+    e.preventDefault();
+    // Scroll up or left = previous frame, down or right = next frame
+    const direction = e.deltaY > 0 ? 1 : -1;
+    stepFrame(direction);
+  }, { passive: false });
+
+  // ── Volume control ──
+  const volOnPath = 'M11 5L6 9H2v6h4l5 4V5zm8.07.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07';
+  const volMutePath = 'M11 5L6 9H2v6h4l5 4V5zm12.41 3.59L21 7l-1.41-1.41L17 8.17l-2.59-2.58L13 7l2.59 2.59L13 12.17l1.41 1.41L17 11l2.59 2.59L21 12.17l-2.59-2.58z';
+  const volLowPath = 'M11 5L6 9H2v6h4l5 4V5zm4.54 3.46a5 5 0 0 1 0 7.07';
+
+  function updateVolIcon() {
+    if (video.muted || video.volume === 0) {
+      volIcon.innerHTML = `<path d="${volMutePath}"/>`;
+    } else if (video.volume <= 0.5) {
+      volIcon.innerHTML = `<path d="${volLowPath}"/>`;
+    } else {
+      volIcon.innerHTML = `<path d="${volOnPath}"/>`;
+    }
+  }
+
+  volBtn.addEventListener('click', () => {
+    video.muted = !video.muted;
+    updateVolIcon();
+  });
+
+  volHalfBtn.addEventListener('click', () => {
+    video.muted = false;
+    video.volume = 0.5;
+    updateVolIcon();
+  });
+
   // ── Titlebar controls ──
   pinBtn.addEventListener('click', () => {
     pinned = !pinned;
     pinBtn.classList.toggle('pinned', pinned);
     ipcRenderer.send('set-always-on-top', pinned);
+  });
+
+  minBtn.addEventListener('click', () => {
+    ipcRenderer.send('minimize-window');
   });
 
   closeBtn.addEventListener('click', () => window.close());
@@ -439,6 +527,9 @@
     else if (e.key >= '0' && e.key <= '9') { setOpacity(parseInt(e.key)); }
     else if (e.key === 'ArrowLeft') { e.preventDefault(); video.currentTime = Math.max(0, video.currentTime - 5); }
     else if (e.key === 'ArrowRight') { e.preventDefault(); video.currentTime = Math.min(video.duration || 0, video.currentTime + 5); }
+    else if (e.key === ',') { e.preventDefault(); stepFrame(-1); }  // < key = prev frame
+    else if (e.key === '.') { e.preventDefault(); stepFrame(1); }   // > key = next frame
+    else if (e.key === 'm') { video.muted = !video.muted; updateVolIcon(); }
     else if (e.key === 'h') { appEl.classList.toggle('hud-autohide'); }
     else if (e.key === 'Escape') { window.close(); }
   });
